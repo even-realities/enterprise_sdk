@@ -1,0 +1,25 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+    namespace 'com.evenrealities.enterprise.example'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.evenrealities.enterprise.example'
+        minSdk 21
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0-beta.14'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    implementation project(':sdk')
+    // Release consumers instead use:
+    // implementation 'com.evenrealities.devices:even-devices-native-android:0.1.0-beta.14'
+}

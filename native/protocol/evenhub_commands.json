@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Logical host parameters only. Native owns protobuf, session IDs, map IDs, fragments, ACKs, timeouts and page heartbeat.",
+  "validation": {
+    "unknownKeys": "reject",
+    "integers": "finite integral platform integers; booleans and floating point are not integers",
+    "strings": "strict UTF-8 byte lengths; no embedded NUL; no normalization",
+    "nativeOnlyFields": [
+      "sessionId",
+      "containerTotalNum",
+      "mapSessionId",
+      "mapTotalSize",
+      "mapFragmentIndex",
+      "mapFragmentPacketSize",
+      "count",
+      "magic",
+      "syncId"
+    ],
+    "maxLogicalPayloadBytes": 32768,
+    "maxReceiveStreams": 4,
+    "fragmentTimeoutMs": 3000,
+    "commandTimeoutMs": 3000,
+    "heartbeatDelayAfterAckMs": 5000,
+    "maxImageBytes": 1048576,
+    "imageFragmentBytes": 4096,
+    "imageFormat": "Whole firmware-format bytes, already encoded for compressMode. No PNG/BMP decoding or LZ4 encoding is implied."
+  },
+  "types": {
+    "page": {
+      "listObjects": "list<listContainer>, default [] <=4",
+      "textObjects": "list<textContainer>, default [] <=8",
+      "imageObjects": "list<imageContainer>, default [] <=4",
+      "menu": "optional menu",
+      "totalContainers": "derived, 1..12; containerId unique across all arrays; at most one event capture"
+    },
+    "commonContainer": {
+      "xPosition": "int 0..576 default0",
+      "yPosition": "int 0..288 default0",
+      "width": "required int1..576",
+      "height": "required int1..288",
+      "containerId": "required uint32 nonzero",
+      "containerName": "required string1..15 UTF8 bytes",
+      "zOrderIndex": "optional uint32"
+    },
+    "border": {
+      "borderWidth": "int0..5 default0",
+      "borderColor": "int0..15 default0",
+      "borderRadius": "int0..10 default0",
+      "paddingLength": "int0..32 default0",
+      "isEventCapture": "bool defaultfalse"
+    },
+    "textContainer": {
+      "extends": [
+        "commonContainer",
+        "border"
+      ],
+      "content": "string0..999 UTF8 bytes defaultempty",
+      "textColor": "optional int0..4"
+    },
+    "listContainer": {
+      "extends": [
+        "commonContainer",
+        "border"
+      ],
+      "itemContainer": {
+        "itemNames": "required list<string0..63 UTF8 bytes>, count1..20",
+        "itemWidth": "int0..576 default0",
+        "isItemSelectBorderEnabled": "bool defaultfalse"
+      }
+    },
+    "imageContainer": {
+      "extends": [
+        "commonContainer"
+      ],
+      "width": "required int20..288",
+      "height": "required int20..144"
+    },
+    "menu": {
+      "items": "required list<menuItem>, count1..10; IDs unique"
+    },
+    "menuItem": {
+      "itemName": "required string1..31 UTF8 bytes",
+      "itemId": "required uint32 nonzero",
+      "position": "int0..10 default0",
+      "checkedIndex": "int0..subItems.length default0",
+      "subItems": "list<menuSubItem> default[] <=5; IDs unique within list"
+    },
+    "menuSubItem": {
+      "itemName": "required string1..31 UTF8 bytes",
+      "itemId": "required uint32 nonzero"
+    }
+  },
+  "commands": [
+    {
+      "name": "createPage",
+      "requestCmd": 0,
+      "requestOneof": 3,
+      "parameters": {
+        "widgetId": "uint32 nonzero default11417",
+        "page": "inline page fields"
+      },
+      "responseCmd": 1,
+      "responseOneof": 4,
+      "resultField": 1,
+      "success": 0,
+      "semantics": "Acquires the sole page lease, assigns unique sessionId, starts native heartbeat after ACK."
+    },
+    {
+      "name": "updateImage",
+      "requestCmd": 3,
+      "requestOneof": 5,
+      "parameters": {
+        "containerId": "required existing image ID",
+        "containerName": "required matching image name",
+        "data": "required byte array1..1048576, whole firmware-format image",
+        "compressMode": "int0..2 default0"
+      },
+      "responseCmd": 4,
+      "responseOneof": 6,
+      "resultField": 8,
+      "success": 4,
+      "correlation": "All echoed metadata fields match current native image fragment. Name may be omitted, but must match when present."
+    },
+    {
+      "name": "updateText",
+      "requestCmd": 5,
+      "requestOneof": 9,
+      "parameters": {
+        "containerId": "required existing text ID",
+        "containerName": "required matching text name",
+        "content": "required string0..1999 UTF8 bytes",
+        "contentOffset": "uint32 default0",
+        "contentLength": "uint32 default UTF8 content byte length",
+        "textColor": "optional int0..4"
+      },
+      "responseCmd": 6,
+      "responseOneof": 10,
+      "resultField": 1,
+      "success": 8
+    },
+    {
+      "name": "rebuildPage",
+      "requestCmd": 7,
+      "requestOneof": 7,
+      "parameters": {
+        "page": "inline page fields"
+      },
+      "responseCmd": 8,
+      "responseOneof": 8,
+      "resultField": 1,
+      "success": 6,
+      "semantics": "Replaces current container/menu identity only after confirmed ACK; page session unchanged."
+    },
+    {
+      "name": "shutdownPage",
+      "requestCmd": 9,
+      "requestOneof": 11,
+      "parameters": {
+        "exitMode": "int0..1 default0"
+      },
+      "responseCmd": 10,
+      "responseOneof": 12,
+      "resultField": 1,
+      "success": 10,
+      "semantics": "Queues behind an in-flight owned command; disarms future heartbeat immediately. Mode0 ACK retires page. Mode1 ACK only confirms prompt: awaitingExit=true, page remains active with native heartbeat until exact scoped exit."
+    },
+    {
+      "name": "heartbeat",
+      "requestCmd": 12,
+      "requestOneof": 14,
+      "parameters": {},
+      "responseCmd": 13,
+      "responseOneof": 15,
+      "resultField": 2,
+      "success": 12,
+      "correlation": "Exact native owner, protobuf magic, unique responseOneof15 and success12. Standard responseCmd13 or observed enterprise firmware echo Cmd12; no other command gains request/response aliasing. Request Cnt is omitted/default0; optional uint32 ACK Cnt is not correlation. Native attempted/confirmed counts are local diagnostics; actual rootCmd remains visible in diagnostics.",
+      "firmwareResponseCmdVariants": [
+        12
+      ]
+    },
+    {
+      "name": "audioControl",
+      "requestCmd": 15,
+      "requestOneof": 18,
+      "parameters": {
+        "enabled": "required bool"
+      },
+      "responseCmd": 16,
+      "responseOneof": 19,
+      "resultField": 1,
+      "success": "Native requested target0or1; omitted scalar means0 only inside actual response branch."
+    },
+    {
+      "name": "menuStartupFailed",
+      "requestCmd": 18,
+      "requestOneof": 21,
+      "parameters": {
+        "errorCode": "required uint32",
+        "errorString": "string0..199 UTF8 bytes defaultempty"
+      },
+      "responseCmd": null,
+      "responseOneof": null,
+      "semantics": "One-way response under current whole-pair READY, also before the first CREATE or after page close. Completes after native transport queue admission; not a device ACK. Without a page it creates no page/session or heartbeat; result omits pageSessionId. Reset/disconnect/replacement revoke any unsent tail."
+    },
+    {
+      "name": "imuControl",
+      "requestCmd": 19,
+      "requestOneof": 22,
+      "parameters": {
+        "enabled": "required bool",
+        "reportFrequency": "int100..1000 default100"
+      },
+      "responseCmd": 20,
+      "responseOneof": 23,
+      "resultField": 1,
+      "success": "Native requested target0or1; any other status fails."
+    },
+    {
+      "name": "menuSubitemResponse",
+      "requestCmd": 23,
+      "requestOneof": 26,
+      "parameters": {
+        "parentItemId": "required current menu parent ID",
+        "subItemId": "required current menu subitem ID",
+        "status": "uint32 default0"
+      },
+      "responseCmd": null,
+      "responseOneof": null,
+      "semantics": "One-way response, completes after native transport queue admission; host must answer actual menu switch before firmware10sec deadline."
+    }
+  ],
+  "eventDetails": {
+    "common": "pageSessionId native page ID",
+    "audioEvent": "Native processed glasses audio, delivered after audioControl enable ACK on the current page and STREAM endpoint. audioPcm is binary mono signed PCM16LE, sampleRate=16000, channels=1, bitsPerSample=16, source=glasses, speakerRole=self/other/unknown, optional signed direction. Disable, page close and disconnect revoke delivery.",
+    "deviceInput": "kind=list/text/system",
+    "listOrText": "containerId, containerName",
+    "list": "selectedItemName, selectedItemIndex",
+    "system": "source=unspecified/rightGlasses/ring/leftGlasses; exitReasonCode defaults0; optional widgetId and scoped pageSessionId",
+    "imuData": "flat finite double x,y,z",
+    "privateEvent": "containerId,containerName,eventId,eventData",
+    "timeoutPageEnterOrExit": "value",
+    "menuStartup": "widgetId",
+    "menuItemClick": "itemId",
+    "menuSubitemSwitch": "parentItemId,subItemId,subItemIndex"
+  },
+  "events": {
+    "2/13": "recognized list/text/sys, enum0..10, container identity fenced; IMU uses finite float32 x/y/z",
+    "11/16": "privateEvent with recognized container identity and uint32 eventId/eventData",
+    "14/17": "privateSystemEvent with command0 timeoutPageEnter or1 timeoutPageExit and uint32 value; connection-scoped forwarding without a page is allowed only under current whole-pair READY and never changes page ownership",
+    "17/20": "menuStartup with matching widgetId for an active page; without a page, accepts nonzero uint32 widgetId under current whole-pair READY",
+    "21/24": "menuItemClick with known action item ID",
+    "22/25": "menuSubitemSwitch with matching known parent/subitem/index",
+    "unpagedOwnership": "Exact frozen endpoint/session/attempt required. Startup/diagnostic events and menuStartupFailed use the same monotonic operation sequence as pages; no synthetic pageSessionId. Container/private/custom-menu-click events still require an owned page.",
+    "terminalExits": "Only SysEvent6/7 with exact widgetId AND native page sessionId retire the lease. Unknown enums/oneofs, duplicate singular fields, wrong wire types, malformed UTF8 or CRC are ignored."
+  }
+}

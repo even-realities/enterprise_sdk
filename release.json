@@ -1,0 +1,18 @@
+{
+  "version": "0.1.0-beta.14",
+  "license": "Apache-2.0",
+  "upstream_source_commit": "f931d52d4716fd150f885f5168b64faabf20783a",
+  "upstream_source_archive": "source/native-sdk-0.1.0-beta.14.tar.gz",
+  "migration": "Repository-only; original published binaries are retained without rebuild or Maven republication.",
+  "android": {
+    "coordinate": "com.evenrealities.devices:even-devices-native-android:0.1.0-beta.14",
+    "url": "https://repo.maven.apache.org/maven2/com/evenrealities/devices/even-devices-native-android/0.1.0-beta.14/even-devices-native-android-0.1.0-beta.14.aar",
+    "sha256": "7e699f7abb5800c3e88d7ecbcd030125a5779ef48cd3d510203d04d88938d816"
+  },
+  "ios": {
+    "product": "EvenDevicesSDK",
+    "package": "https://github.com/even-realities/enterprise_sdk.git",
+    "zip": "spm/EvenDevicesSDK-0.1.0-beta.14.xcframework.zip",
+    "sha256": "c32984425afffda456fccccb738b0c69d29080bdbe07d503154c501eac260e78"
+  }
+}

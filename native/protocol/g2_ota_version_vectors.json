@@ -1,0 +1,8 @@
+{
+  "schemaSource": "even_connect b2d7b6047bbf4d51639689e57eeca16451606c88 lib/g2/proto/data_package/g2_setting/g2_setting.proto",
+  "readbackSource": "glasses fc26dd6850a17e058b3cbf5ee5afc9258656c777 lib/common/services/ota/ota_post_upgrade_verifier.dart and lib/common/extension/proto/proto_base_settings.dart",
+  "vectorOrigin": "Synthetic protobuf/CRC examples for DeviceReceiveRequest and BASIC_SETTING; independent request and response sync IDs",
+  "request": "aa21170b01010920080210a9012202080105a7",
+  "response": "aa14411d01010920080210a901221408012a07322e342e312e323207322e342e312e32ad5b",
+  "responseAllFields": "aa14418a01010920080210a901228001080110ffffffff0f18ffffffff0f20ffffffff0f2a0b322e342e3132332e343536320b322e342e3132332e34353638ffffffff0f40ffffffff0f48ffffffff0f50ffffffff0f58ffffffff0f60ffffffff0f68ffffffff0f70ffffffff0f78ffffffff0f8001ffffffff0f8801ffffffff0f9001ffffffff0f9801ffffffff0f79b1"
+}

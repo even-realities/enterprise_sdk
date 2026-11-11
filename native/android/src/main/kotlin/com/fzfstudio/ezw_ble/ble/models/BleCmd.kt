@@ -1,0 +1,142 @@
+package com.fzfstudio.ezw_ble.ble.models
+
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCharacteristic
+import android.util.Base64
+import com.fzfstudio.ezw_ble.ble.BleBusinessConnectionAttempt
+import com.fzfstudio.ezw_ble.ble.BleCommandLease
+
+/**
+ * 原生 GATT 指令发送结果。
+ *
+ * 该模型通过 EventChannel 回传给 Dart；二进制 payload 必须保持 Base64 编码，避免
+ * Flutter 标准通道在不同平台间传输 ByteArray 时出现类型不一致。
+ */
+data class BleCmd(
+    /** 指令所属设备的 Android address / 插件 uuid。 */
+    val uuid: String,
+    /** 私有服务类型，用于区分默认/OTA/stream/file 等写入通道。 */
+    val psType: Int,
+    /** 设备返回或失败占位的原始二进制数据。 */
+    val data: ByteArray?,
+    /** 原生写入或读取是否成功。 */
+    val isSuccess: Boolean,
+    /** Dart OTA recovery batch 的业务 session，0 表示旧事件或非 OTA。 */
+    val sessionGeneration: Long = 0L,
+    /** Native 物理连接 attempt，0 表示旧事件或非 OTA。 */
+    val attemptGeneration: Long = 0L,
+    /** G2 OTA native 事务 ID；非事务包保持空字符串。 */
+    val otaTransactionId: String = "",
+    /** G2 OTA App 事务 generation；非事务包保持 0。 */
+    val otaGeneration: Long = 0L,
+    /** G2 OTA native registry 实例标识；非事务包保持空字符串。 */
+    val otaInstanceId: String = "",
+    /** Receive evidence and outgoing intent have separate lifetimes and meanings. */
+    val receiveIdentity: BleBusinessConnectionAttempt? = null,
+    val expectedAttempt: BleBusinessConnectionAttempt? = null,
+    /** Invalidated logical commands drop their unsent tail even on the same physical attempt. */
+    val commandLease: BleCommandLease? = null,
+) {
+
+    /** Local queue reservation for an acknowledged AuthMgr write. Copies and Flutter events carry no receipt. */
+    internal var finishBusinessAuthWrite: ((BluetoothGatt, BluetoothGattCharacteristic?, Int) -> Boolean)? = null
+
+    companion object {
+        /**
+         * 构造发送失败事件。
+         *
+         * 失败事件不携带 payload，Dart 侧只需要 uuid/psType/isSuccess 判断对应通道失败。
+         */
+        fun fail(uuid: String, psType: Int): BleCmd = BleCmd(uuid, psType, null, false)
+    }
+
+    /**
+     * 转换为 Flutter EventChannel 可传输的 Map。
+     *
+     * ByteArray 统一编码为无换行 Base64，保持 Android/iOS/Dart 三端事件格式一致。
+     */
+    fun toFlutterMap(): Map<String, Any?> = mapOf(
+        // 1. uuid/psType/isSuccess 直接透传给 Dart 侧模型。
+        "uuid" to uuid,
+        "psType" to psType,
+        // 2. MethodChannel/EventChannel 不直接暴露 ByteArray 语义，统一使用 Base64 字符串。
+        "data" to data?.let { Base64.encodeToString(it, Base64.NO_WRAP) },
+        "isSuccess" to isSuccess,
+        // 3. OTA notify/response 需要和 START/INFORMATION/RAW 的 exact pair 绑定。
+        "sessionGeneration" to sessionGeneration,
+        "attemptGeneration" to attemptGeneration,
+        // 4. G2 OTA ACK/notify 必须携带 native 事务身份；Dart 会 fail-closed
+        //    拒绝空身份，避免旧 OTA 回包消费新事务。
+        "otaTransactionId" to otaTransactionId,
+        "otaGeneration" to otaGeneration,
+        "otaInstanceId" to otaInstanceId,
+        // The legacy/OTA pair above describes command intent. A receive
+        // identity is separately signed by the exact native GATT callback and
+        // must remain independently nullable. Flattening these fields lets a
+        // rejected identity inherit a positive legacy pair and fail open.
+        "receiveIdentity" to receiveIdentity?.let {
+            mapOf(
+                "uuid" to it.uuid,
+                "sessionGeneration" to it.sessionGeneration,
+                "attemptGeneration" to it.attemptGeneration,
+            )
+        },
+    )
+
+    /**
+     * 比较两个指令结果是否等价。
+     *
+     * ByteArray 默认按引用比较，这里必须使用 contentEquals 才能让测试和队列判断按内容生效。
+     */
+    override fun equals(other: Any?): Boolean {
+        // 1. 同一对象必然相等。
+        if (this === other) return true
+
+        // 2. 不同模型类型不能继续比较字段。
+        if (javaClass != other?.javaClass) return false
+        other as BleCmd
+
+        // 3. 标量字段先比较，失败时快速返回。
+        if (uuid != other.uuid) return false
+        if (psType != other.psType) return false
+        if (sessionGeneration != other.sessionGeneration) return false
+        if (attemptGeneration != other.attemptGeneration) return false
+        if (otaTransactionId != other.otaTransactionId) return false
+        if (otaGeneration != other.otaGeneration) return false
+        if (otaInstanceId != other.otaInstanceId) return false
+
+        // 4. ByteArray 要按内容比较，避免相同 payload 因引用不同被误判。
+        if (data != null) {
+            if (other.data == null) return false
+            if (!data.contentEquals(other.data)) return false
+        } else if (other.data != null) return false
+        if (isSuccess != other.isSuccess) return false
+        if (receiveIdentity != other.receiveIdentity || expectedAttempt != other.expectedAttempt) return false
+        if (commandLease !== other.commandLease) return false
+
+        return true
+    }
+
+    /**
+     * 生成与 `equals` 一致的 hashCode。
+     *
+     * ByteArray 必须使用 contentHashCode，与 contentEquals 保持集合语义一致。
+     */
+    override fun hashCode(): Int {
+        // 1. 按 data class 默认字段顺序组合 hash，便于定位变更影响。
+        var result = uuid.hashCode()
+        result = 31 * result + psType
+        result = 31 * result + (data?.contentHashCode() ?: 0)
+        result = 31 * result + isSuccess.hashCode()
+        result = 31 * result + sessionGeneration.hashCode()
+        result = 31 * result + attemptGeneration.hashCode()
+        result = 31 * result + otaTransactionId.hashCode()
+        result = 31 * result + otaGeneration.hashCode()
+        result = 31 * result + otaInstanceId.hashCode()
+        result = 31 * result + (receiveIdentity?.hashCode() ?: 0)
+        result = 31 * result + (expectedAttempt?.hashCode() ?: 0)
+        result = 31 * result + (commandLease?.hashCode() ?: 0)
+        return result
+    }
+
+}

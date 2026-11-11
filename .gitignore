@@ -1,0 +1,18 @@
+# Generated build/test products and local machine configuration.
+.DS_Store
+*.log
+*.pyc
+__pycache__/
+.gradle/
+.build/
+build/
+.cxx/
+.idea/
+*.iml
+local.properties
+xcuserdata/
+DerivedData/
+# Examples are initialized with a host-supplied signed license; never commit it.
+examples/**/enterprise-licenses.json
+.env
+.env.*

@@ -1,0 +1,19 @@
+package com.fzfstudio.ezw_ble.ble.models
+
+import com.fzfstudio.ezw_ble.ble.models.enums.BleConnectState
+import com.fzfstudio.ezw_utils.gson.GsonSerializable
+
+data class BleConnectModel(
+    val uuid: String,
+    val name: String,
+    val connectState: BleConnectState,
+    val mtu: Int = 247,
+    val source: BleConnectSource = BleConnectSource.UNKNOWN,
+    val sessionGeneration: Long = 0L,
+    val attemptGeneration: Long = 0L,
+    /** Serialized as the legacy session-generation field for old Dart consumers. */
+    val generation: Long = sessionGeneration,
+    val nativeTrace: Map<String, Any?>? = null,
+    /** 控制面进度，不能冒充真实 physical contact。 */
+    val pairingPhase: String? = null,
+): GsonSerializable()

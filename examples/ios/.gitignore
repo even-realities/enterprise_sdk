@@ -1,0 +1,5 @@
+# Per-user Xcode settings, generated outputs and real portal proofs stay local.
+xcuserdata/
+DerivedData/
+*.xcuserstate
+enterprise-licenses.json

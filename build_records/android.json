@@ -1,0 +1,19 @@
+{
+  "coordinate": "com.evenrealities.devices:even-devices-native-android:0.1.0-beta.14",
+  "license": "Apache-2.0",
+  "source_commit": "f931d52d4716fd150f885f5168b64faabf20783a",
+  "source_tree": "dad18a95a6d532bf8975e52cbf3f39320470ae00",
+  "source_repository": "source/native-sdk-0.1.0-beta.14.tar.gz#native-sdk.bundle",
+  "working_tree_dirty": false,
+  "android_source_sha256": "e293936ea0b8691da86f9692a01cbbde361a070aea739b43eb6dac6f3d23f1c9",
+  "gradle": "Gradle 8.10",
+  "java": "openjdk version \"21.0.11\" 2026-04-21\nOpenJDK Runtime Environment Homebrew (build 21.0.11)\nOpenJDK 64-Bit Server VM Homebrew (build 21.0.11, mixed mode, sharing)",
+  "verification": [
+    "testDebugUnitTest",
+    "lintRelease",
+    "assembleRelease",
+    "publishReleasePublicationToMavenRepository",
+    "AAR and Maven metadata checks"
+  ],
+  "remote_published": false
+}

@@ -1,0 +1,26 @@
+{
+  "original_archive": "third_party/flutter_ezw_lc3/ios/Classes/framework/liblc3.a",
+  "original_archive_sha256": "2d250d14bc6469a80b1a9565d437ace12fd69d371af19dca68731eb15a57df66",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin",
+  "slices": {
+    "ios-arm64": "original arm64 iOS objects unchanged",
+    "ios-arm64_x86_64-simulator": "original x86_64 simulator objects; original arm64 embedded LLVM compiled for iOS simulator",
+    "macos-arm64_x86_64": "original per-architecture embedded LLVM compiled for macOS"
+  },
+  "platform_metadata_rewritten": false,
+  "files_sha256": {
+    "Info.plist": "1623127690a561a1e7c10733873203f5ae2b0ffc43a45d5d6dfdd5ebfbbfb1c0",
+    "ios-arm64/Headers/lc3.h": "95f7684efdc4fbd183cbf6692dcc8fed18e1d8bad98855c929f4272640b76098",
+    "ios-arm64/Headers/lc3_private.h": "73a532324b286469a8cd5380614c9d0dc4ed1507fef51ec3dd440c1bf1ad50fd",
+    "ios-arm64/Headers/module.modulemap": "2ba812a7b9907016e4698f384fe11ee85f0fc6fd702bbd4811b585f757f755a4",
+    "ios-arm64/device.a": "90afb8aa48d8a7e8d98259fb78f0182ff6eb2bf87d04d9d55d0a62056334ae9d",
+    "ios-arm64_x86_64-simulator/Headers/lc3.h": "95f7684efdc4fbd183cbf6692dcc8fed18e1d8bad98855c929f4272640b76098",
+    "ios-arm64_x86_64-simulator/Headers/lc3_private.h": "73a532324b286469a8cd5380614c9d0dc4ed1507fef51ec3dd440c1bf1ad50fd",
+    "ios-arm64_x86_64-simulator/Headers/module.modulemap": "2ba812a7b9907016e4698f384fe11ee85f0fc6fd702bbd4811b585f757f755a4",
+    "ios-arm64_x86_64-simulator/simulator.a": "e7a672b353b2677f6feb91d716567d23dd0da36c04e7066a32391d29a28cf14f",
+    "macos-arm64_x86_64/Headers/lc3.h": "95f7684efdc4fbd183cbf6692dcc8fed18e1d8bad98855c929f4272640b76098",
+    "macos-arm64_x86_64/Headers/lc3_private.h": "73a532324b286469a8cd5380614c9d0dc4ed1507fef51ec3dd440c1bf1ad50fd",
+    "macos-arm64_x86_64/Headers/module.modulemap": "2ba812a7b9907016e4698f384fe11ee85f0fc6fd702bbd4811b585f757f755a4",
+    "macos-arm64_x86_64/macos.a": "befe15ab9653fc28a6e25a2d8371068d98f2e5ba6752cc8661ad296f5e3c93a6"
+  }
+}

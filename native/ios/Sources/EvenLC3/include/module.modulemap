@@ -1,0 +1,4 @@
+module EvenLC3 {
+  header "even_lc3.h"
+  export *
+}

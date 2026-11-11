@@ -1,0 +1,199 @@
+import org.gradle.api.credentials.HttpHeaderCredentials
+import org.gradle.authentication.http.HttpHeaderAuthentication
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.7.3'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10'
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'maven-publish'
+
+group = 'com.evenrealities.devices'
+// Repository migration preserves the released coordinate; pass sdkVersion for a new release.
+def defaultSdkVersion = '0.1.0-beta.14'
+version = providers.gradleProperty('sdkVersion').getOrElse(defaultSdkVersion)
+if (project.hasProperty('sdkStandaloneDistribution') && project.hasProperty('isolateFlutterBridge')) {
+    throw new GradleException('Standalone SDK packaging cannot use the isolated Flutter bridge variant.')
+}
+
+// Maven consumers receive the license notices inside the AAR, not only in the ZIP bundle.
+def sdkLicenseResources = layout.buildDirectory.dir('generated/sdk-license-resources')
+tasks.register('prepareSdkLicenseResources', Sync) {
+    into sdkLicenseResources
+    from('../../LICENSE') { into 'META-INF'; rename { 'even-devices-LICENSE.txt' } }
+    from('../../NOTICE') { into 'META-INF'; rename { 'even-devices-NOTICE.txt' } }
+    from('../licenses/ANDROID_THIRD_PARTY_NOTICES.md') { into 'META-INF'; rename { 'THIRD_PARTY_NOTICES.md' } }
+    from('../licenses/flutter_ezw_ble_LICENSE') { into 'META-INF/licenses' }
+    from('../licenses/liblc3_LICENSE') { into 'META-INF/licenses' }
+}
+tasks.configureEach { task ->
+    if (task.name.startsWith('process') && task.name.endsWith('JavaRes')) {
+        task.dependsOn('prepareSdkLicenseResources')
+    }
+}
+
+// Preserve the pinned production decoder instructions. A same-length SONAME
+// rewrite isolates it from the compatibility Flutter plugin's liblc3.so.
+def sdkLc3Libraries = layout.buildDirectory.dir('generated/sdk-lc3-libraries')
+tasks.register('prepareSdkLc3Libraries') {
+    inputs.dir('../../third_party/flutter_ezw_lc3/android/src/main/jniLibs')
+    outputs.dir(sdkLc3Libraries)
+    doLast {
+        ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'].each { abi ->
+            byte[] bytes = file("../../third_party/flutter_ezw_lc3/android/src/main/jniLibs/${abi}/liblc3.so").bytes
+            byte[] before = 'liblc3.so\u0000'.getBytes('US-ASCII')
+            byte[] after = 'libeg3.so\u0000'.getBytes('US-ASCII')
+            int count = 0
+            for (int i = 0; i <= bytes.length - before.length; i++) {
+                boolean matches = true
+                for (int j = 0; j < before.length; j++) if (bytes[i+j] != before[j]) matches = false
+                if (matches) { System.arraycopy(after, 0, bytes, i, after.length); count++ }
+            }
+            if (count != 1) throw new GradleException("Unexpected LC3 SONAME count for ${abi}: ${count}")
+            def target = new File(sdkLc3Libraries.get().asFile, "${abi}/libeg3.so")
+            target.parentFile.mkdirs()
+            target.bytes = bytes
+        }
+    }
+}
+tasks.configureEach { task ->
+    if (task.name.startsWith('configureCMake') || task.name.startsWith('buildCMake')) {
+        task.dependsOn('prepareSdkLc3Libraries')
+    }
+}
+
+// Isolate this engine from the legacy Flutter transport still shipped for R1/OTA.
+// Generate relocated sources rather than modifying the audited upstream files.
+def isolatedSources = layout.buildDirectory.dir('generated/isolated-kotlin')
+tasks.register('isolateFlutterBridgeSources') {
+    inputs.dir('src/main/kotlin')
+    outputs.dir(isolatedSources)
+    doLast {
+        def output = isolatedSources.get().asFile
+        delete output
+        fileTree('src/main/kotlin').matching { include '**/*.kt' }.each { source ->
+            def target = new File(output, file('src/main/kotlin').toPath().relativize(source.toPath()).toString())
+            target.parentFile.mkdirs()
+            target.text = source.getText('UTF-8').replace('com.fzfstudio.ezw_ble', 'com.evenrealities.nativeg2.bleengine').replace('com.fzfstudio.ezw_utils', 'com.evenrealities.nativeg2.utils')
+        }
+    }
+}
+tasks.configureEach { task ->
+    if (task.name.startsWith('compile') && task.name.endsWith('Kotlin')) {
+        task.dependsOn('isolateFlutterBridgeSources')
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+android {
+    namespace 'com.evenrealities.devices'
+    // Preserve audited production bytes so the AAR can verify a SONAME-only delta.
+    packaging { jniLibs { keepDebugSymbols += ['**/libeg3.so'] } }
+    sourceSets { main.resources.srcDir(sdkLicenseResources) }
+    if (project.hasProperty('isolateFlutterBridge')) {
+        sourceSets { main.java.srcDirs = [isolatedSources] }
+    }
+    compileSdk 36
+    ndkVersion "27.1.12297006"
+    externalNativeBuild { cmake { path "src/main/cpp/CMakeLists.txt"; version "3.22.1" } }
+
+    defaultConfig {
+        minSdk 21
+        externalNativeBuild { cmake { arguments "-DEVEN_LC3_LIB_DIR=${sdkLc3Libraries.get().asFile.absolutePath}" } }
+        ndk { abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64" }
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+    publishing { singleVariant('release') }
+    testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+    // Versions match the audited Flutter BLE transport; neither is a Flutter runtime.
+    api 'com.google.code.gson:gson:2.11.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    testImplementation 'junit:junit:4.13.2'
+    // Android supplies org.json at runtime; the local JVM test runner needs it.
+    testImplementation 'org.json:json:20180813'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                artifactId = 'even-devices-native-android'
+                pom {
+                    name = 'Even Devices Android Native SDK'
+                    description = 'Standalone G2 enterprise SDK without a Flutter runtime dependency.'
+                    url = 'https://github.com/even-realities/enterprise_sdk'
+                    scm {
+                        url = 'https://github.com/even-realities/enterprise_sdk'
+                        connection = 'scm:git:https://github.com/even-realities/enterprise_sdk.git'
+                        developerConnection = 'scm:git:ssh://git@github.com/even-realities/enterprise_sdk.git'
+                    }
+                    developers {
+                        developer {
+                            id = 'even-realities'
+                            name = 'Even Realities'
+                            url = 'https://github.com/even-realities'
+                        }
+                    }
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                            distribution = 'repo'
+                        }
+                    }
+                }
+            }
+        }
+        repositories {
+            // The packager redirects only this local repository into its private staging directory.
+            maven {
+                url = providers.gradleProperty('sdkMavenRepository').isPresent() ?
+                    uri(providers.gradleProperty('sdkMavenRepository').get()) :
+                    layout.buildDirectory.dir('repository').get().asFile.toURI()
+            }
+            def remoteUrl = providers.environmentVariable('EVEN_MAVEN_URL').orNull
+            if (remoteUrl != null) {
+                maven {
+                    name = 'GitLab'
+                    url = uri(remoteUrl)
+                    // HTTP is restricted to a deliberate local-development opt-in.
+                    allowInsecureProtocol = providers.gradleProperty('allowInsecureMaven')
+                        .getOrElse('false').toBoolean()
+                    credentials(HttpHeaderCredentials) {
+                        name = providers.environmentVariable('EVEN_MAVEN_TOKEN_HEADER')
+                            .getOrElse('Deploy-Token')
+                        value = providers.environmentVariable('EVEN_MAVEN_TOKEN').orNull
+                    }
+                    authentication { header(HttpHeaderAuthentication) }
+                }
+            }
+        }
+    }
+}
+
+// Kotlin adds src/main/kotlin independently of Android's Java source set.
+if (project.hasProperty('isolateFlutterBridge')) {
+    kotlin.sourceSets.main.kotlin.setSrcDirs([isolatedSources])
+}

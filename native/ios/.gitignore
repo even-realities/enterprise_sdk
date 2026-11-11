@@ -1,0 +1,4 @@
+/.build/
+
+# Local build_xcframework.sh output; audited Codec/ inputs remain tracked.
+/Frameworks/

@@ -1,0 +1,79 @@
+{
+  "schema_version": 2,
+  "status": "migration-baseline",
+  "g2": {
+    "business_service_ids": {
+      "device_settings": 128,
+      "notification": 4,
+      "evenhub": 224
+    },
+    "excluded_service_id_example": 7,
+    "business_auth": {
+      "service_id": 128,
+      "command_id": 4,
+      "success_requires_auth_mgr_sec_auth": true,
+      "request_magic_max": 255,
+      "command_ack_and_success_push_are_separate": true
+    },
+    "time_sync": {
+      "service_id": 128,
+      "command_id": 128,
+      "request_magic_min": 1,
+      "request_magic_max": 255,
+      "response_magic_match": "exact",
+      "firmware_compatibility": "observed-enterprise-ack-echoes-low-byte"
+    },
+    "enterprise_gatt": {
+      "service_suffix": "8450",
+      "business_rx_suffix": "8401",
+      "business_tx_suffix": "8402",
+      "authorization_suffix": "8403",
+      "minimum_mtu": 150,
+      "maximum_authorization_payload_bytes": 145,
+      "authorization_result_bytes": 2,
+      "authorization_timeout_ms": 3000
+    },
+    "evenhub_text_page": {
+      "widget_id": 11417,
+      "container_id": 1,
+      "text_utf8_max_bytes": 64,
+      "heartbeat_interval_ms": 5000,
+      "command_timeout_ms": 3000,
+      "heartbeat_counter_on_wire": false
+    }
+  },
+  "enterprise_authorization": {
+    "bundle_schema_version": 1,
+    "sn_ascii_bytes": 14,
+    "app_id_utf8_max_bytes": 64,
+    "signature_bytes": 64,
+    "result_codes": {
+      "success": 0,
+      "invalid_format": 1,
+      "sn_mismatch": 2,
+      "invalid_signature": 3,
+      "internal_error": 4,
+      "invalid_connection_state": 6
+    },
+    "wire_format": "provisional-v1-awaiting-firmware-confirmation"
+  },
+  "vectors": {
+    "g2_business_auth_success_protobuf_hex": "08041a020801",
+    "g2_business_auth_ios_request_magic_42_sync_7_hex": "aa21070c010180000804102a1a0408011003f203",
+    "g2_business_auth_android_request_magic_42_sync_7_hex": "aa21070c010180000804102a1a04080110041573",
+    "g2_business_auth_response_magic_42_sync_7_hex": "aa12070a010180010804102a1a020801583e",
+    "g2_time_sync_request_magic_42_sync_7_hex": "aa21071b01018020088001102a8208110880e2cfaa0610f2ffffffffffffffff01a7db",
+    "g2_time_sync_response_magic_42_sync_9_hex": "aa12090a01018000088001102a8208009146",
+    "enterprise_auth_v1_app_demo_sn_130301_signature_0_to_63_hex": "01062044656d6f200e5332313147414245313330333031000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "g2_business_auth_ack_magic_195_sync_223_hex": "aa12df0901018000080410c3011a006893",
+    "g2_business_auth_push_magic_67_sync_67_hex": "aa12430a01018001080410431a020801f88f",
+    "g2_evenhub_create_hex": "aa21073d0101e0200800102a1a3508011a2c0818101818900420f00140084801520b6e61746976652d746578745801620d48656c6c6f204576656e487562289959387b03af",
+    "g2_evenhub_create_ack_hex": "aa1207080101e0000801102a22002793",
+    "g2_evenhub_heartbeat_hex": "aa2107080101e020080c102a7200e2bc",
+    "g2_evenhub_heartbeat_ack_hex": "aa12070a0101e000080d102a7a02100c3117",
+    "g2_evenhub_close_hex": "aa2107080101e0200809102a5a00fa10",
+    "g2_evenhub_close_ack_hex": "aa12070a0101e000080a102a6202080a0d7a",
+    "g2_evenhub_click_hex": "aa1207170101e00108026a11120f0801120b6e61746976652d746578743bb9",
+    "g2_evenhub_heartbeat_echo_ack_protobuf_hex": "080c10027a02100c"
+  }
+}

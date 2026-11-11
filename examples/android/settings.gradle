@@ -1,0 +1,7 @@
+pluginManagement {
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
+}
+rootProject.name = 'EnterpriseNativeExample'
+include ':app', ':sdk'
+// Build the exact native sources under review, without a Flutter toolchain.
+project(':sdk').projectDir = file('../../native/android')
